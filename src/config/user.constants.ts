@@ -1,0 +1,5 @@
+const DEFAULT_USER_BALANCE = 10_000;
+
+export const USER_CONSTANTS = {
+    DEFAULT_USER_BALANCE
+}

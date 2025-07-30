@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Candlestick Chart</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+    }
+    #chart {
+      width: 100%;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+
+  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+  <script>
+    const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+      layout: {
+        background: { color: '#000' },
+        textColor: '#ccc',
+      },
+      grid: {
+        vertLines: { color: '#222' },
+        horzLines: { color: '#222' },
+      },
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: true,
+      },
+    });
+
+    const candleSeries = chart.addCandlestickSeries({
+      upColor: '#26a69a',
+      downColor: '#ef5350',
+      borderVisible: false,
+      wickUpColor: '#26a69a',
+      wickDownColor: '#ef5350',
+    });
+
+    const candles = [];
+
+    const SYMBOL = "TESTUSD";
+    const ws = new WebSocket("ws://localhost:3000");
+
+    let currentCandle = null;
+    let interval = 1; // seconds per candle
+
+    function getCandleTime() {
+      return Math.floor(Date.now() / 1000 / interval) * interval;
+    }
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        type: "trade.subscribe",
+        payload: { symbol: SYMBOL },
+      }));
+    };
+
+    ws.onmessage = (msg) => {
+      const message = JSON.parse(msg.data);
+      if (message.type !== "trade.executed") return;
+
+      const price = message.price;
+      const timestamp = getCandleTime();
+
+      if (!currentCandle || currentCandle.time !== timestamp) {
+        currentCandle = {
+          time: timestamp,
+          open: price,
+          high: price,
+          low: price,
+          close: price,
+        };
+        candles.push(currentCandle);
+      } else {
+        currentCandle.high = Math.max(currentCandle.high, price);
+        currentCandle.low = Math.min(currentCandle.low, price);
+        currentCandle.close = price;
+      }
+
+      candleSeries.setData(candles);
+    };
+  </script>
+</body>
+</html>
