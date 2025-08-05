@@ -7,6 +7,7 @@ export async function match_order(order: Order) {
         size: number;
         symbol: string;
         timestamp: number;
+        candleTimestamp: number;
     }[] = [];
 
     const deltas : {
@@ -132,11 +133,14 @@ export async function match_order(order: Order) {
                 throw new Error("Market not found");
             }
 
+            const timestamp = Date.now();
+            const candleTimestamp = timestamp - (timestamp % 60_000);
             executed_trades.push({
                 price: trade_price,
                 size: trade_size,
                 symbol: symbol.toUpperCase(),
-                timestamp: new Date().getTime()
+                timestamp,
+                candleTimestamp,
             });
         }
     });

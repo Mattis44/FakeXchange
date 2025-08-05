@@ -44,7 +44,11 @@ export const createOrder = async (params: createOrderParams) => {
                 {symbol: trade.symbol},
                 {
                     type: "trade.executed",
-                    ...trade,
+                    price: trade.price,
+                    size: trade.size,
+                    symbol: trade.symbol,
+                    timestamp: trade.timestamp,
+                    candleTimestamp: trade.candleTimestamp,
                 }
             );
             await updateCandleForTrade(trade);
