@@ -6,16 +6,14 @@ export async function updateCandleForTrade(trade: {
     size: number;
     symbol: string;
     timestamp: number;
+    candleTimestamp: number;
 }) {
-    const alignedTimestamp =
-        Number(trade.timestamp) - (Number(trade.timestamp) % 60_000);
-
     const candle = await prisma.candle.findFirst({
         where: {
             market: {
                 symbol: trade.symbol,
             },
-            timestamp: alignedTimestamp,
+            timestamp: trade.candleTimestamp,
             resolution: "1m",
         },
     });
