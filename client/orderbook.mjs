@@ -80,12 +80,6 @@ ws.on("open", () => {
 ws.on("message", (data) => {
   const msg = JSON.parse(data.toString());
 
-  if (msg.type === "orderbook.init") {
-    bids = msg.bids.sort((a, b) => b.price - a.price);
-    asks = msg.asks.sort((a, b) => a.price - b.price);
-    render();
-  }
-
   if (msg.type === "orderbook.delta") {
     const { order, action } = msg;
     const list = order.side === "buy" ? bids : asks;

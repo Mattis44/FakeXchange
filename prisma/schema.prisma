@@ -25,10 +25,11 @@ model Market {
   symbol      String   @unique // e.g., "TESTUSD"
   base        String   // e.g., "TEST"
   quote       String   // e.g., "USD"
-  lastPrice  Float?  // Last traded price
+  lastPrice  Float  // Last traded price
   volume     Float?  // All-time volume
   orders     Order[]
   trades     Trade[]
+  candles    Candle[]
 }
 
 model Order {
@@ -42,8 +43,8 @@ model Order {
   remaining Float // Remaining size of the order
   status    String   // e.g., "open", "filled", "cancelled"
   role     OrderRole? @default(MAKER)
-  createdAt DateTime @default(now())
-  
+  timestamp DateTime @default(now())
+
   user     User   @relation(fields: [userId], references: [id])
   market   Market @relation(fields: [marketId], references: [id])
 
@@ -62,13 +63,27 @@ model Trade {
   sellOrderId String
   takerOrderId String?
   makerOrderId String?
-  createdAt DateTime @default(now())
+  timestamp DateTime @default(now())
 
   market   Market @relation(fields: [marketId], references: [id])
   buyOrder Order  @relation("BuyOrder", fields: [buyOrderId], references: [id])
   sellOrder Order  @relation("SellOrder", fields: [sellOrderId], references: [id])
   takerOrder Order? @relation("TakerOrder", fields: [takerOrderId], references: [id])
   makerOrder Order? @relation("MakerOrder", fields: [makerOrderId], references: [id])
+}
+
+model Candle {
+  id       String   @id @default(uuid())
+  marketId  String
+  resolution String @default("1m") // 1m everytime, and used to aggregate other candles (5m, 1h, 1d, etc.)
+  timestamp BigInt // Unix timestamp in milliseconds
+  open     Float
+  high     Float
+  low      Float
+  close    Float
+  volume   Float @default(0)
+
+  market   Market @relation(fields: [marketId], references: [id])
 }
 
 // Not used
@@ -79,5 +94,5 @@ model Position {
   side      String   // e.g., "long" or "short"
   size      Float
   entryPrice Float
-  createdAt DateTime @default(now())
+  timestamp DateTime @default(now())
 }

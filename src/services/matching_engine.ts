@@ -6,7 +6,7 @@ export async function match_order(order: Order) {
         price: number;
         size: number;
         symbol: string;
-        timestamp: string;
+        timestamp: number;
     }[] = [];
 
     const deltas : {
@@ -65,7 +65,6 @@ export async function match_order(order: Order) {
         let last_traded_price: number | null = null;
 
         for (const counter of orders) {
-            // trade size = 1 
             if (remaining <= 0) break;
 
             const trade_size = Math.min(remaining, counter.remaining);
@@ -85,7 +84,6 @@ export async function match_order(order: Order) {
                 },
             });
 
-            // new_remaining = 2
             const new_remaining = counter.remaining - trade_size;
             const updated_counter = await tx.order.update({
                 where: {id: counter.id},
@@ -138,7 +136,7 @@ export async function match_order(order: Order) {
                 price: trade_price,
                 size: trade_size,
                 symbol: symbol.toUpperCase(),
-                timestamp: new Date().toISOString(),
+                timestamp: new Date().getTime()
             });
         }
     });

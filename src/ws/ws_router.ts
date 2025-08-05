@@ -1,6 +1,7 @@
 import {WebSocket} from "ws";
 import {handleOrderbookSubscribe} from "./handlers/orderbook_handler";
-import { handleTradeSubscribe } from "./handlers/trades_handler";
+import {handleTradeSubscribe} from "./handlers/trades_handler";
+import {handleCandleSubscribe} from "./handlers/candles_handler";
 
 export async function handleMessage(ws: WebSocket, raw: string) {
     let message: any;
@@ -29,6 +30,9 @@ export async function handleMessage(ws: WebSocket, raw: string) {
         }
         if (module === "trade" && action === "subscribe") {
             return await handleTradeSubscribe(ws, payload);
+        }
+        if (module === "candle" && action === "subscribe") {
+            return await handleCandleSubscribe(ws, payload);
         }
 
         return ws.send(jsonError(`Unknown handler for ${type}`));

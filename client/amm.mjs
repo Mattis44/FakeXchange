@@ -1,74 +1,71 @@
 import axios from "axios";
 
 const API_URL = "http://localhost:3000/orders";
-const MARKET_ID = "fae7bc8d-244b-41f3-b64e-aa6cff000bc3";
-const USER_ID = "2479a106-a327-4722-b15e-748f095f9282";
+const MARKET_ID = "f5f94be9-8426-46d0-9a30-271092634a61";
+const USER_ID = "f7eed2d2-1917-46ef-8c5c-55b8b830c491";
 
 let lastPrice = 100;
-let tradeCount = 0;
-
-function randomSize() {
-    return parseFloat((Math.random() * 2 + 0.1).toFixed(2));
-}
 
 function sleep(ms) {
-    return new Promise((res) => setTimeout(res, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function createTradePair() {
-    tradeCount++;
+function randomSize() {
+    return parseFloat((Math.random() * 3 + 0.1).toFixed(2));
+}
 
-    const bigMoveTrigger = Math.floor(Math.random() * 5) + 10;
-    if (tradeCount % bigMoveTrigger === 0) {
-        const direction = Math.random() < 0.5 ? 1 : 1;
-        const factor = 1 + direction * 1; // 30% move
-        lastPrice = parseFloat((lastPrice * factor).toFixed(2));
-        console.log(`BIG MOVE: ${direction > 0 ? "↑" : "↓"} 10% → ${lastPrice}`);
-    }
+function randomPriceAround(base, variance = 0.3) {
+    const delta = (Math.random() * variance) * (Math.random() > 0.5 ? 1 : -1);
+    return parseFloat((base + delta).toFixed(2));
+}
 
-    const size = randomSize();
-
-    const delta = parseFloat((Math.random() * 0.5).toFixed(2));
-
-    const direction = Math.random() > 0.5 ? 1 : 1;
-
-    const midPrice = parseFloat((lastPrice + direction * delta).toFixed(2));
-
-    const spread = parseFloat((Math.random() * 0.1 + 0.01).toFixed(2));
-    const sellPrice = parseFloat((midPrice + spread / 2).toFixed(2));
-    const buyPrice = parseFloat((midPrice - spread / 2).toFixed(2));
-
-    lastPrice = midPrice;
-
-    const sellOrder = {
+async function placeLimitOrder(side, price, size) {
+    const order = {
         userId: USER_ID,
         marketId: MARKET_ID,
-        side: "sell",
+        side,
         type: "limit",
-        price: sellPrice,
-        size,
-    };
-
-    const buyOrder = {
-        userId: USER_ID,
-        marketId: MARKET_ID,
-        side: "buy",
-        type: "limit",
-        price: buyPrice,
+        price,
         size,
     };
 
     try {
-        await axios.post(API_URL, sellOrder);
-        await axios.post(API_URL, buyOrder);
-        console.log(`Trade #${tradeCount}: Buy ${buyPrice} / Sell ${sellPrice}`);
+        await axios.post(API_URL, order);
+        console.log(`📥 ${side.toUpperCase()} @ ${price} [${size}]`);
     } catch (err) {
-        console.error("Failed to create trade:", err.message);
+        console.error(`Failed to place ${side} order:`, err.message);
     }
-
-    const nextDelay = Math.random() * 10 + 5;
-    await sleep(nextDelay);
-    createTradePair();
 }
 
-createTradePair();
+async function runSimulation() {
+    while (true) {
+        const buyOrders = [];
+        const sellOrders = [];
+
+        for (let i = 0; i < 5; i++) {
+            const size = randomSize();
+            const buyPrice = randomPriceAround(lastPrice - 0.2, 0.1);
+            const sellPrice = randomPriceAround(lastPrice + 0.2, 0.1);
+
+            buyOrders.push(placeLimitOrder("buy", buyPrice, size));
+            sellOrders.push(placeLimitOrder("sell", sellPrice, size));
+        }
+
+        await Promise.all([...buyOrders, ...sellOrders]);
+
+        if (Math.random() < 0.6) {
+            const tradePrice = randomPriceAround(lastPrice, 0.2);
+            const size = randomSize();
+            await placeLimitOrder("buy", tradePrice, size);
+            await placeLimitOrder("sell", tradePrice, size);
+            lastPrice = tradePrice;
+            console.log(`💥 Executed trade at ${tradePrice}`);
+        }
+
+        const wait = Math.floor(Math.random() * 5) + 1; // wait between 1 and 5 seconds
+        console.log(`⏱ Waiting ${wait}s before next batch...`);
+        await sleep(wait * 1000);
+    }
+}
+
+runSimulation();
