@@ -7,6 +7,7 @@ async function resetAll() {
 
   await prisma.trade.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.candle.deleteMany();
 
   console.log("Database reset complete.");
 

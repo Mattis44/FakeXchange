@@ -20,6 +20,7 @@ app.use(cors());
 app.use(express.json());
 
 const wss = new WebSocketServer({server});
+startCandleCron();
 
 app.use("/users", userRoutes);
 
@@ -39,6 +40,5 @@ wss.on("connection", (ws) => {
 });
 
 server.listen(port, () => {
-    startCandleCron();
     console.log(`🚀 Server running on http://localhost:${port}`);
 });

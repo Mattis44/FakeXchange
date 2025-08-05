@@ -11,27 +11,19 @@ function sleep(ms) {
 }
 
 function randomSize() {
-    return parseFloat((Math.random() * 3 + 0.1).toFixed(2));
+    return parseFloat((Math.random() * 2 + 0.1).toFixed(2)); // moins gros volumes
 }
 
-function randomPriceAround(base, variance = 0.3) {
+function randomPriceAround(base, variance = 0.2) {
     const delta = (Math.random() * variance) * (Math.random() > 0.5 ? 1 : -1);
     return parseFloat((base + delta).toFixed(2));
 }
 
-async function placeLimitOrder(side, price, size) {
-    const order = {
-        userId: USER_ID,
-        marketId: MARKET_ID,
-        side,
-        type: "limit",
-        price,
-        size,
-    };
-
+async function placeOrder(side, type, price, size) {
+    const order = { userId: USER_ID, marketId: MARKET_ID, side, type, price, size };
     try {
         await axios.post(API_URL, order);
-        console.log(`📥 ${side.toUpperCase()} @ ${price} [${size}]`);
+        console.log(`📥 ${side.toUpperCase()} ${type} @ ${price} [${size}]`);
     } catch (err) {
         console.error(`Failed to place ${side} order:`, err.message);
     }
@@ -39,30 +31,23 @@ async function placeLimitOrder(side, price, size) {
 
 async function runSimulation() {
     while (true) {
-        const buyOrders = [];
-        const sellOrders = [];
-
-        for (let i = 0; i < 5; i++) {
+        // 1. Quelques ordres limit autour du prix
+        for (let i = 0; i < 2; i++) { // moins d'ordres
             const size = randomSize();
-            const buyPrice = randomPriceAround(lastPrice - 0.2, 0.1);
-            const sellPrice = randomPriceAround(lastPrice + 0.2, 0.1);
-
-            buyOrders.push(placeLimitOrder("buy", buyPrice, size));
-            sellOrders.push(placeLimitOrder("sell", sellPrice, size));
+            await placeOrder("buy", "limit", randomPriceAround(lastPrice - 0.1, 0.05), size);
+            await placeOrder("sell", "limit", randomPriceAround(lastPrice + 0.1, 0.05), size);
         }
 
-        await Promise.all([...buyOrders, ...sellOrders]);
+        // 2. Forcer une exécution à chaque boucle
+        const tradePrice = randomPriceAround(lastPrice, 0.05);
+        const size = randomSize();
+        await placeOrder("buy", "limit", tradePrice, size);
+        await placeOrder("sell", "limit", tradePrice, size);
+        lastPrice = tradePrice;
+        console.log(`💥 Executed trade at ${tradePrice}`);
 
-        if (Math.random() < 0.6) {
-            const tradePrice = randomPriceAround(lastPrice, 0.2);
-            const size = randomSize();
-            await placeLimitOrder("buy", tradePrice, size);
-            await placeLimitOrder("sell", tradePrice, size);
-            lastPrice = tradePrice;
-            console.log(`💥 Executed trade at ${tradePrice}`);
-        }
-
-        const wait = Math.floor(Math.random() * 5) + 1; // wait between 1 and 5 seconds
+        // 3. Pause
+        const wait = Math.floor(Math.random() * 3) + 1; 
         console.log(`⏱ Waiting ${wait}s before next batch...`);
         await sleep(wait * 1000);
     }

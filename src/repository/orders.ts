@@ -1,7 +1,7 @@
 import {prisma} from "../prisma";
 import {match_order} from "../services/matching_engine";
 import {broadcastToSubscribers} from "../ws/ws_manager";
-import { updateCandleForTrade } from "./candles";
+import {updateCandlesForTrades} from "./candles";
 
 interface createOrderParams {
     userId: string;
@@ -38,39 +38,38 @@ export const createOrder = async (params: createOrderParams) => {
             throw new Error("Market not found");
         }
         const {trades, deltas} = await match_order(order);
-        for (const trade of trades) {
+        if (trades.length > 0) {
             broadcastToSubscribers(
                 "trade",
-                {symbol: trade.symbol},
+                {symbol: market.symbol},
                 {
-                    type: "trade.executed",
-                    price: trade.price,
-                    size: trade.size,
-                    symbol: trade.symbol,
-                    timestamp: trade.timestamp,
-                    candleTimestamp: trade.candleTimestamp,
+                    type: "trade.executed.batch",
+                    trades,
                 }
             );
-            await updateCandleForTrade(trade);
+
+            await updateCandlesForTrades(trades);
         }
 
-        for (const delta of deltas) {
+        if (deltas.length > 0) {
             broadcastToSubscribers(
                 "orderbook",
                 {symbol: market.symbol},
                 {
-                    type: "orderbook.delta",
+                    type: "orderbook.delta.batch",
                     symbol: market.symbol,
-                    action: delta.action,
-                    order: {
-                        id: delta.order.id,
-                        userId: delta.order.userId,
-                        side: delta.order.side,
-                        type: delta.order.type,
-                        price: delta.order.price,
-                        size: delta.order.size,
-                        remaining: delta.order.remaining,
-                    },
+                    deltas: deltas.map((delta) => ({
+                        action: delta.action,
+                        order: {
+                            id: delta.order.id,
+                            userId: delta.order.userId,
+                            side: delta.order.side,
+                            type: delta.order.type,
+                            price: delta.order.price,
+                            size: delta.order.size,
+                            remaining: delta.order.remaining,
+                        },
+                    })),
                 }
             );
         }
